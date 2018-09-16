@@ -25,7 +25,12 @@ def load_data():
     v = np.load('../../data_8km_mean_X/v_8km_mean.npy')
 
     y = np.load('../../data_8km_mean_y/wqv_32.npy')
-    y = y.reshape(1423*70*32*32,1)
+    
+    th = np.swapaxes(th, 0,1)
+    w = np.swapaxes(w, 0,1)
+    qv = np.swapaxes(qv, 0,1)
+    u = np.swapaxes(u, 0,1)
+    v = np.swapaxes(v, 0,1)
 
     th = th.reshape(1423*70*32*32,1)
     w = w.reshape(1423*70*32*32,1)
@@ -40,8 +45,24 @@ def load_data():
     u = sc.fit_transform(u)
     v = sc.fit_transform(v)
 
-    X = np.concatenate((th, w, qv, u, v), axis=1)
-    print(X.shape)
+    # swapaxex to fit in RNN input
+    y = np.swapaxes(y, 0,1)
+    y = y.reshape(70, -1)
+    y = np.swapaxes(y, 0,1)
+
+    th = th.reshape(70, -1, 1)
+    w = w.reshape(70, -1, 1)
+    qv = qv.reshape(70 ,-1 ,1)
+    u = u.reshape(70, -1, 1)
+    v = v.reshape(70, -1 ,1)
+
+    th = np.swapaxes(th, 0,1)
+    w = np.swapaxes(w, 0,1)
+    qv = np.swapaxes(qv, 0,1)
+    u = np.swapaxes(u, 0,1)
+    v = np.swapaxes(v, 0,1)
+
+    X = np.concatenate((th, w, qv, u, v), axis=-1)
     return X, y
 
 class ModelMGPU(Model):
@@ -61,26 +82,25 @@ class ModelMGPU(Model):
         return super(ModelMGPU, self).__getattribute__(attrname)
 
 
-def DNN():
+def RNN():
     print("Build model!!")
     model = Sequential()
-    
-    model.add(Dense(256, activation = 'relu', kernel_initializer='random_uniform',bias_initializer='zeros', input_shape=(5,)))
-    for i in range(10):
-        model.add(Dense(512, activation = 'relu',kernel_initializer='random_uniform',bias_initializer='zeros'))
-        #model.add(LeakyReLU(alpha=0.1))
-        #model.add(BatchNormalization())
-    model.add(Dense(1, activation = 'linear',kernel_initializer='random_uniform',bias_initializer='zeros'))
+    model.add(LSTM(128, return_sequences=True, input_shape=(70,5)))
+    model.add(LSTM(128, return_sequences=False))
+    model.add(Dense(128, activation='linear'))
+    model.add(Dense(70, activation='linear'))
     return model
 
 tStart = time.time()
 
 X, y = load_data()
-model = DNN()
+print(X.shape)
+print(y.shape)
+model = RNN()
 parallel_model = ModelMGPU(model, 3)
 parallel_model.compile(optimizer = 'adam', loss='mean_squared_error')
 print(model.summary())
-dirpath = "../../model/DNN/"
+dirpath = "../model/RNN/"
 if not os.path.exists(dirpath):
     os.mkdir(dirpath)
 
@@ -88,25 +108,8 @@ filepath= dirpath + "/weights-improvement-{epoch:03d}-{loss:.3e}.hdf5"
 checkpoint = ModelCheckpoint(filepath, monitor='loss', 
                             save_best_only=False, period=5)
 earlystopper = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
-parallel_model.fit(X,y, batch_size=4096, epochs=150, shuffle=True, callbacks = [checkpoint, earlystopper])
+parallel_model.fit(X,y, validation_split=0.1 , batch_size=256, epochs=150, shuffle=True, callbacks = [checkpoint, earlystopper])
 
 tEnd = time.time()
 
 print("It cost %f sec" %(tEnd - tStart))
-
-#pre = linear_model.predict(X)
-#pre = pre.reshape(1423,70,32,32)
-#y = y.reshape(1423,70,32,32)
-
-#a=[0,100,200,300,400,500,600,700,800,900,1000]
-#b=[7,10,23,30,7,5,8,12,16,25]
-#c=[5,3,26,30,7,5,8,16,25,12]
-#
-#img_dir = '/home/ericakcc/Desktop/research2/img/linear_model/'
-#
-#for i in range(10):
-#    plt.figure(i)
-#    plt.plot(pre[a[i],:,b[i],c[i]]*2.5*10**6, z, label='Pre')
-#    plt.plot(y[a[i],:,b[i],c[i]]*2.5*10**6, z, label='True')
-#    plt.legend()
-#    plt.savefig(img_dir + 'img_%s' %i)

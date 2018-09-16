@@ -85,10 +85,10 @@ if not os.path.exists(dirpath):
     os.mkdir(dirpath)
 
 filepath= dirpath + "/weights-improvement-{epoch:03d}-{loss:.3e}.hdf5"
-checkpoint = ModelCheckpoint(filepath, monitor='loss', 
+checkpoint = ModelCheckpoint(filepath, monitor='val_loss', 
                             save_best_only=False, period=5)
 earlystopper = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
-parallel_model.fit(X,y, batch_size=4096, epochs=150, shuffle=True, callbacks = [checkpoint, earlystopper])
+parallel_model.fit(X,y, validation_split=0.1, batch_size=4096, epochs=150, shuffle=True, callbacks = [checkpoint, earlystopper])
 
 tEnd = time.time()
 
