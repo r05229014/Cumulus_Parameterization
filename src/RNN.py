@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from keras import Model
 from keras.models import Sequential, load_model
-from keras.layers import LeakyReLU
+from keras.layers import LeakyReLU, TimeDistributed
 from keras.layers.core import Dense, Flatten, Dropout
 from keras.layers import LSTM
 from keras.layers.convolutional import Convolution3D, MaxPooling3D, Convolution2D, MaxPooling2D
@@ -49,6 +49,8 @@ def load_data():
     y = np.swapaxes(y, 0,1)
     y = y.reshape(70, -1)
     y = np.swapaxes(y, 0,1)
+    y = y.reshape(1457152, 70, 1)
+    print('y shape:', y.shape)
 
     th = th.reshape(70, -1, 1)
     w = w.reshape(70, -1, 1)
@@ -63,6 +65,7 @@ def load_data():
     v = np.swapaxes(v, 0,1)
 
     X = np.concatenate((th, w, qv, u, v), axis=-1)
+    print('X shape:', X)
     return X, y
 
 class ModelMGPU(Model):
@@ -86,16 +89,18 @@ def RNN():
     print("Build model!!")
     model = Sequential()
     model.add(LSTM(128, return_sequences=True, input_shape=(70,5)))
-    model.add(LSTM(128, return_sequences=False))
-    model.add(Dense(128, activation='linear'))
-    model.add(Dense(70, activation='linear'))
+    model.add(LSTM(128, return_sequences=True))
+    model.add(LSTM(128, return_sequences=True))
+    model.add(TimeDistributed(Dense(1)))
+    #model.add(LSTM(128, return_sequences=True))
+    #model.add(LSTM(70, return_sequences=True))
+    #model.add(Dense(128, activation='linear'))
+    #model.add(Dense(70, activation='linear'))
     return model
 
 tStart = time.time()
 
 X, y = load_data()
-print(X.shape)
-print(y.shape)
 model = RNN()
 parallel_model = ModelMGPU(model, 3)
 parallel_model.compile(optimizer = 'adam', loss='mean_squared_error')
@@ -105,8 +110,8 @@ if not os.path.exists(dirpath):
     os.mkdir(dirpath)
 
 filepath= dirpath + "/weights-improvement-{epoch:03d}-{loss:.3e}.hdf5"
-checkpoint = ModelCheckpoint(filepath, monitor='loss', 
-                            save_best_only=False, period=5)
+checkpoint = ModelCheckpoint(filepath, monitor='val_loss', 
+                            save_best_only=False, period=2)
 earlystopper = EarlyStopping(monitor='val_loss', patience=5, verbose=1)
 parallel_model.fit(X,y, validation_split=0.1 , batch_size=256, epochs=150, shuffle=True, callbacks = [checkpoint, earlystopper])
 
