@@ -6,6 +6,8 @@ import os
 from sklearn.linear_model import LinearRegression
 import pickle
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import matplotlib.mlab as mlab
 import time
 
 def load_data():
@@ -31,7 +33,7 @@ def load_data():
 tStart = time.time()
 
 X, y = load_data()
-z = np.arange(70)
+z = np.load('../data/z.npy')
 linear_model = LinearRegression()
 linear_model.fit(X,y)
 
@@ -40,8 +42,10 @@ print(linear_model.intercept_ )
 
 tEnd = time.time()
 print('It cost %f sec' %(tEnd - tStart))
-#pre = linear_model.predict(X)
-#pre = pre.reshape(1423,70,32,32)
+pre = linear_model.predict(X)
+pre = pre.reshape(1423,70,32,32)
+
+del X,y
 #y = y.reshape(1423,70,32,32)
 
 
@@ -51,11 +55,30 @@ print('It cost %f sec' %(tEnd - tStart))
 #b=[7,10,23,30,7,5,8,12,16,25]
 #c=[5,3,26,30,7,5,8,16,25,12]
 
-#img_dir = '/home/ericakcc/Desktop/research2/img/linear_model/'
 
-#for i in range(10):
+
+
+
+#for i in range(1423):
 #    plt.figure(i)
 #    plt.plot(pre[a[i],:,b[i],c[i]]*2.5*10**6, z, label='Pre')
 #    plt.plot(y[a[i],:,b[i],c[i]]*2.5*10**6, z, label='True')
 #    plt.legend()
 #    plt.savefig(img_dir + 'img_%s' %i)
+#
+pre_hor = pre[:, 24, :,:]
+x = np.arange(32)
+xx,yy = np.meshgrid(x,x)
+
+for i in range(1423):
+    plt.figure(i)
+    plt.title('t = %s' %i)
+    cs = plt.contourf(xx,yy,pre_hor[i]*2.5*10**6, cmap=cm.coolwarm, vmax=10000, vmin=-10000, levels = np.arange(-10000, 10001, 10))
+    m = plt.cm.ScalarMappable(cmap=cm.coolwarm)
+    m.set_array(pre_hor)
+    m.set_clim(-10000, 10000)
+    cbar = plt.colorbar(cs)
+    cbar.set_ticks([-10000, -8000,-6000,-4000,-2000,0,2000,4000,6000,8000,10000])
+    cbar.set_ticklabels([-10000, -8000,-6000,-4000,-2000,0,2000,4000,6000,8000,10000])
+    plt.savefig('../img/linear_hor/' + '{:0>4d}'.format(i) + '.png')
+    plt.close()

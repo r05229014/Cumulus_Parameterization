@@ -63,14 +63,14 @@ print(z.shape)
 img_dir = '/home/ericakcc/Desktop/Cumulus_Parameterization/img/RNN2/'
 pre = model.predict(X, batch_size=2048)
 print(pre.shape)
-if not os.path.exists(img_dir):
-    os.mkdir(img_dir)
+#if not os.path.exists(img_dir):
+#    os.mkdir(img_dir)
 
-for i in range(1000): 
-    plt.figure(i)
-    plt.plot(pre[random.randint(0, 1457152)]*2.5*10**6, z, label='Pre')
-    plt.plot(y[random.randint(0, 1457152)]*2.5*10**6, z, label='True')
+#for i in range(1000): 
+#    plt.figure(i)
+#    plt.plot(pre[random.randint(0, 1457152)]*2.5*10**6, z, label='Pre')
+#    plt.plot(y[random.randint(0, 1457152)]*2.5*10**6, z, label='True')
     #plt.xlim(-500, 500)
-    plt.legend()
-    plt.savefig(img_dir + 'img_%s' %i)
-    plt.close()
+#    plt.legend()
+#    plt.savefig(img_dir + 'img_%s' %i)
+#    plt.close()
